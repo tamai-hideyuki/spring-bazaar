@@ -369,14 +369,19 @@ CREATE INDEX idx_osh_order_id_changed_at
 
 ## 9. 税率の管理(Phase 1 は定数扱い)
 
-Phase 1 は `application.yml` で税率を定数化:
+Phase 1 は `application.yml` で税率を定数化(要件書 v0.5.2 §4「税率の設定仕様」準拠):
 
 ```yaml
-app:
-  tax:
-    standard: 0.10
-    reduced: 0.08
+tax:
+  rates:
+    standard: "0.10"   # 標準税率 10%
+    reduced:  "0.08"   # 軽減税率 8%
+  rounding: FLOOR       # 行単位切り捨て
 ```
+
+- 値は **YAML 上で文字列**(`"0.10"`)として記述する。素の数値は `double` 経由で丸め誤差を含みうるため。
+- バインディングは `@ConfigurationProperties(prefix = "tax")` を付けた `record TaxProperties` で型安全に受ける。
+- 参照は `TaxProperties#rateOf(TaxCategory) : BigDecimal` に集約し、Phase 2 のマスタ化(`tax_rates` テーブル)で呼び出し側を変えずに差し替えられるようにする。
 
 注文確定時に `products.tax_category` に応じた税率を読み、`order_items.tax_rate` にスナップショット。
 
